@@ -5,45 +5,30 @@ suppressPackageStartupMessages({
 })
 
 
-surprise_self_df <- readRDS(
+memory_df <- rio::import(
   here::here(
-    "data", "prep", "memory", "surprise_self_raw_prl_data.RDS"
+    "data", "prep", "memory", "memory_data.csv"
   )
 )
-surprise_self_df$is_self <- "self"
-surprise_self_df$is_surprise <- "surprise"
 
+memory_df <- memory_df |> 
+  dplyr::rename("is_correct" = "column8")
 
-control_self_df <- readRDS(
-  here::here(
-    "data", "prep", "memory", "control_self_raw_prl_data.RDS"
+memory_df$is_correct <- ifelse(memory_df$is_old_chosen == 3, NA, memory_df$is_correct)
+
+memory_df |> 
+  group_by(is_self, is_surprise) |> 
+  summarize(
+    acc = mean(is_correct, na.rm= TRUE),
+    mrt = mean((rt/1000), trim=0.1)
   )
-)
-control_self_df$is_self <- "self"
-control_self_df$is_surprise <- "control"
 
-surprise_stranger_df <- readRDS(
-  here::here(
-    "data", "prep", "memory", "surprise_stranger_raw_prl_data.RDS"
-  )
-)
-surprise_stranger_df$is_self <- "stranger"
-surprise_stranger_df$is_surprise <- "surprise"
+hist(memory_df$rt)
 
-control_stranger_df <- readRDS(
-  here::here(
-    "data", "prep", "memory", "control_stranger_raw_prl_data.RDS"
-  )
-)
-control_stranger_df$is_self <- "stranger"
-control_stranger_df$is_surprise <- "control"
-
-d1 <- rbind(surprise_self_df, control_self_df)
-
-d1$user_id <- d1$user_id |> 
-  dplyr::recode(
-   "gi_gh_1958_11_15_917_m" = "gi_gh_1968_11_15_317_m"
-  )
+# d1$user_id <- d1$user_id |> 
+#   dplyr::recode(
+#    "gi_gh_1958_11_15_917_m" = "gi_gh_1968_11_15_317_m"
+#   )
 
 
 # is_correct : 1 = correct
@@ -55,15 +40,8 @@ d1$user_id <- d1$user_id |>
 #                3 = no response
 
 
-d1$is_correct <- ifelse(
-  d1$is_correct == 3, NA, 
-  ifelse(d1$is_correct == 1, 1, 0)
-)
 
-d1$image_chosen <- ifelse(
-  d1$image_chosen == -1, NA, 
-  ifelse(d1$image_chosen == 1, "old", "new")
-)
+
 
 d1$image_chosen <- factor(d1$image_chosen)
 
@@ -84,17 +62,16 @@ d3 |>
 
 
 fm <- glmer(
-  is_correct ~ is_surprise + (1 | user_id),
+  is_correct ~ is_surprise + (1 | participant_code),
     # (1 | old_img_number) + (1 | new_img_number), 
   family = binomial(), 
-  data = d3
+  data = memory_df
   )
 summary(fm)
 
 fm <- lmer(
-  log(rt) ~ is_surprise + (1 | user_id) +
-     (1 | new_img_number),
-  data = d1
+  rt ~ is_surprise + is_self + (1 | participant_code),
+  data = memory_df
 )
 summary(fm)
 
