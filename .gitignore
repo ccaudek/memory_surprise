@@ -1,3 +1,10 @@
+# Filese created by hddmrl
+src/Python/hddmrl/ddm
+src/Python/hddmrl/models
+
+# macOS files
+*DS_Store
+
 # History files
 .Rhistory
 .Rapp.history
