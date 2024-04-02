@@ -1,11 +1,18 @@
-# Pre-processing PRL raw data
+###
+##
+# Pre-processing of the PRL raw data. Creates input for hddmrl.
+##
+###
 
-library(tidyverse)
-library(tidyr)
-library(here)
-library(rio)
-library(lme4)
-library(brms)
+
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(tidyr)
+  library(here)
+  library(rio)
+  library(lme4)
+  library(brms)
+})
 
 
 raw_df <- rio::import(
@@ -19,7 +26,7 @@ colnames(raw_df) <- gsub("\\.", "_", colnames(raw_df))
 colnames(raw_df) <- tolower(colnames(raw_df))
 
 # Check the new column names
-glimpse(raw_df)
+# glimpse(raw_df)
 
 # Custom function to fill NAs, skipping the first three entries for each subject
 fill_mood_values <- function(df) {
@@ -40,7 +47,7 @@ raw_df <- raw_df %>%
   ungroup()
 
 # Check the results for the mood_slider_value column
-print(raw_df$mood_slider_value)
+# print(raw_df$mood_slider_value)
 
 # Custom function to fill the remaining NAs with the first available value 
 # for each subject
@@ -63,7 +70,7 @@ raw_df <- raw_df %>%
   ungroup()
 
 # Check the results for the mood_slider_value column
-print(raw_df$mood_slider_value)
+# print(raw_df$mood_slider_value)
 
 # Custom function to fill empty strings with the previous non-empty value
 fill_video_names <- function(df) {
@@ -84,14 +91,14 @@ raw_df <- raw_df %>%
   ungroup()
 
 # Check the results for the video_file_name column
-print(raw_df$video_file_name[1:30])
+# print(raw_df$video_file_name[1:30])
 
-raw_df |> 
-  group_by(video_type) |> 
-  summarize(
-    acc = mean(feedback_received),
-    mrt = mean(reaction_time, trim= 0.1)
-  )
+# raw_df |> 
+#   group_by(video_type) |> 
+#   summarize(
+#     acc = mean(feedback_received),
+#     mrt = mean(reaction_time, trim= 0.1)
+#   )
 
 # Wrangle chosen_image
 raw_df <- raw_df %>%
@@ -189,12 +196,12 @@ rio::export(
 )
 
 
-raw_df |> 
-  group_by(is_self, is_surprise) |> 
-  summarize(
-    acc = mean(feedback_received),
-    rt = mean(reaction_time, trim = 0.1)
-  )
+# raw_df |> 
+#   group_by(is_self, is_surprise) |> 
+#   summarize(
+#     acc = mean(feedback_received),
+#     rt = mean(reaction_time, trim = 0.1)
+#   )
 
 
 # lavinia data -----------------------------------------------------------------
@@ -205,8 +212,8 @@ lavinia_data <- readRDS(
   )
 )
 
-length(unique(lavinia_data$user_id))
-table(lavinia_data$is_self, lavinia_data$is_surprise)
+# length(unique(lavinia_data$user_id))
+# table(lavinia_data$is_self, lavinia_data$is_surprise)
 
 lavinia_data <- lavinia_data |> 
   mutate(
@@ -216,7 +223,7 @@ lavinia_data <- lavinia_data |>
 lavinia_data$rt <- ifelse(
   lavinia_data$rt > 10, median(lavinia_data$rt), lavinia_data$rt)
 
-hist(lavinia_data$rt)
+# hist(lavinia_data$rt)
 
 lavinia_data <- lavinia_data %>%
   mutate(surprise = case_when(
@@ -244,11 +251,11 @@ lavinia_data <- lavinia_data |>
     feedback = ifelse(feedback == 1, 1, 0)
   )
 
-lavinia_data |> 
-  group_by(is_surprise, is_self) |> 
-  summarize(
-    acc = mean(feedback)
-  )
+# lavinia_data |> 
+#   group_by(is_surprise, is_self) |> 
+#   summarize(
+#     acc = mean(feedback)
+#   )
 
 lavinia_data$subj_idx <- as.integer(factor(lavinia_data$subj_idx))
 
@@ -269,80 +276,18 @@ sorted_df <- lavinia_data %>%
     subj_idx, cond, trial, is_surprise, is_self, response,
     feedback, rt, split_by, q_init)
 
-foo <- rbind(sorted_df, sorted_new_df)
+including_lavinia_data <- rbind(sorted_df, sorted_new_df)
+
+including_lavinia_data$rt <- ifelse(
+  including_lavinia_data$rt < 0.2, 0.2, including_lavinia_data$rt
+)
 
 rio::export(
-  sorted_df,
+  including_lavinia_data,
   here::here(
     "data", "prep", "prl", "prl_surprise_input_for_hddmrl.csv"
   )
 )
 
-
-
-# Behavioral indices -----------------------------------------------------------
-
-calculate_indices <- function(data) {
-  data %>%
-    mutate(
-      # Identify if the choice stayed the same as the previous trial
-      stay = lead(choice) == choice,
-      # Identify if the outcome was a win (1) or a loss (-1) in the previous trial
-      prev_outcome = lag(outcome)
-    ) %>%
-    group_by(subjID, condition) %>%
-    summarise(
-      # Calculate win-stay: proportion of stays after a win
-      win_stay = mean(stay & prev_outcome == 1, na.rm = TRUE),
-      # Calculate lose-shift: proportion of shifts after a loss
-      lose_shift = mean(!stay & prev_outcome == -1, na.rm = TRUE)
-    )
-}
-
-# Apply the function to your data frame
-indices_df <- calculate_indices(df)
-
-indices_df |> 
-  group_by(condition) |> 
-  summarize(
-    avg_win_stay = mean(win_stay),
-    avg_lose_shift = mean(lose_shift)
-  )
-
-raw_df |> 
-  group_by(video_type) |> 
-  summarize(
-    mood = mean(mood_slider_value, trim = 0.1)
-  )
-
-hist(raw_df$mood_slider_value)
-
-fm <- lmer(mood_slider_value ~ video_type + (1 | subject_code), data = raw_df)
-summary(fm)
-
-m1 <- brm(
-  mood_slider_value ~ video_type + (1 | subj_name), 
-  family = student(),
-  data = raw_df,
-  backend = "cmdstanr"
-)
-pp_check(m1)
-summary(m1)
-
-marginal_effects(m1, "video_type")
-
-
-
-m2 <- brm(
-  mood_slider_value ~ video_type + 
-    (video_type | subj_name) + (1 | img_number), 
-  family = student(),
-  data = raw_df,
-  backend = "cmdstanr"
-)
-pp_check(m2) 
-summary(m2)
-
-marginal_effects(m1, "video_type")
-
+# eof ----
 

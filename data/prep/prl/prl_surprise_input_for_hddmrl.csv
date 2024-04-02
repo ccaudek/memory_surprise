@@ -1666,7 +1666,7 @@ subj_idx,cond,trial,is_surprise,is_self,response,feedback,rt,split_by,q_init
 12,surprise_stranger,15,surprise,stranger,0,1,2.00295615196228,4,0.5
 12,surprise_stranger,16,surprise,stranger,0,1,2.36747336387634,4,0.5
 12,surprise_stranger,17,surprise,stranger,0,1,0.630902767181396,4,0.5
-12,surprise_stranger,18,surprise,stranger,1,0,0.0249998569488525,4,0.5
+12,surprise_stranger,18,surprise,stranger,1,0,0.2,4,0.5
 12,surprise_stranger,19,surprise,stranger,0,1,2.35796046257019,4,0.5
 12,surprise_stranger,20,surprise,stranger,0,0,3.0799572467804,4,0.5
 12,surprise_stranger,21,surprise,stranger,0,1,4.09812188148499,4,0.5

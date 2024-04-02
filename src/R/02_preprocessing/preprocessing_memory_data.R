@@ -2,6 +2,7 @@ suppressPackageStartupMessages({
   library("tidyverse")
   library("here")
   library("lme4")
+  library("mice")
 })
 
 
@@ -14,9 +15,70 @@ memory_df <- rio::import(
 memory_df <- memory_df |> 
   dplyr::rename("is_correct" = "column8")
 
-
 memory_df$is_correct <- ifelse(
   memory_df$is_old_chosen == 3, NA, memory_df$is_correct)
+
+memory_df$rt <- memory_df$rt / 1000
+
+memory_df$is_self <- factor(memory_df$is_self)
+memory_df$is_surprise <- factor(memory_df$is_surprise)
+
+# S/C (surprise/control) E/O (self/other)
+
+memory_df <- memory_df %>%
+  mutate(condition = case_when(
+    is_surprise == "SURPRISE" & is_self == "SELF" ~ "SE",
+    is_surprise == "SURPRISE" & is_self == "STRANGER" ~ "SO",
+    is_surprise == "NOSURPRISE" & is_self == "SELF" ~ "CE",
+    is_surprise == "NOSURPRISE" & is_self == "STRANGER" ~ "CO",
+    TRUE ~ NA_character_  # This line handles any cases that don't match the above conditions
+  ))
+
+memory_df$condition <- factor(memory_df$condition)
+
+memory_df$subj_idx <- as.integer(factor(memory_df$participant_code))
+memory_df$response <- memory_df$is_correct
+
+df <- memory_df |> 
+  dplyr::select(subj_idx, response, participant_code, is_self, is_surprise, 
+                condition, rt)
+
+data.init = df
+for (i in 1:ncol(data.init)) data.init[, i][is.na(data.init[, i])] = 1
+
+imp <- mice(
+  df, 
+  method = "norm.predict", 
+  m = 1, 
+  data.init = data.init, 
+  seed = 111
+)
+
+df1 <- complete(imp)
+
+df1 |> 
+  group_by(condition) |> 
+  summarize(
+    mrt = median(rt),
+    acc = mean(response)
+  )
+
+# Sorting df1 by subj_idx and then by condition
+df1_sorted <- df1 %>% 
+  arrange(subj_idx, condition)
+
+rio::export(
+  df1_sorted,
+  here::here(
+    "data", "prep", "memory", "memory_surprise_input_for_hddmrl.csv"
+  )
+)
+
+
+# eof ---
+
+
+
 
 
 fm <- glmer(
@@ -38,7 +100,7 @@ summary(m1)
 
 marginal_effects(m1, "is_self")
 
-memory_df$RT <- memory_df$rt / 1000
+
 
 m2 <- brm(
   RT ~ is_self + (is_self | participant_code), 
