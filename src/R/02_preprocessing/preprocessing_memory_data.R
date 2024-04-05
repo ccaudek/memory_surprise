@@ -43,6 +43,8 @@ df <- memory_df |>
   dplyr::select(subj_idx, response, participant_code, is_self, is_surprise, 
                 condition, rt)
 
+df$rt <- ifelse((df$rt > 2.95) | (df$rt < 0.2), NA, df1$rt)
+
 data.init = df
 for (i in 1:ncol(data.init)) data.init[, i][is.na(data.init[, i])] = 1
 
@@ -66,6 +68,9 @@ df1 |>
 # Sorting df1 by subj_idx and then by condition
 df1_sorted <- df1 %>% 
   arrange(subj_idx, condition)
+
+length(unique(df1$participant_code))
+# hist(df1$rt)
 
 rio::export(
   df1_sorted,

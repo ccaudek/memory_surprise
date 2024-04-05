@@ -104,6 +104,10 @@ for (subject_folder in subject_folders) {
   combined_data <- process_subject_folder(subject_folder, combined_data, base_txt_column_names, expected_num_columns)
 }
 
+combined_data$participant_code <- tolower(combined_data$participant_code)
+
+length(unique(combined_data$participant_code))
+
 # Write the combined dataframe to a CSV file
 write.csv(
   combined_data, 

@@ -23,7 +23,7 @@ source("src/R/functions/prl_funs.R")
 source("src/R/01a_import_data/01_import_prl_data.R")
 
 # Generate input for hddmrl.
-source("src/R/01a_import_data/02_pre_processing.R")
+source("src/R/01a_import_data/02_pre_processing_prl.R")
 
 
 ###
@@ -38,7 +38,12 @@ source("src/R/01a_import_data/02_pre_processing.R")
 
 ###
 ##
-# Memory data preparation
+# Memory data 
 ##
 ###
+
+# Generate input for hddmrl.
+source("src/R/01a_import_data/03_import_memory_data.R")
+
+
 
