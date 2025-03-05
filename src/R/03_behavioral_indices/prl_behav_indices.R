@@ -10,7 +10,7 @@ calculate_indices <- function(data) {
       # Identify if the outcome was a win (1) or a loss (-1) in the previous trial
       prev_outcome = lag(outcome)
     ) %>%
-    group_by(subjID, condition) %>%
+    group_by(subjID, cond) %>%
     summarise(
       # Calculate win-stay: proportion of stays after a win
       win_stay = mean(stay & prev_outcome == 1, na.rm = TRUE),
@@ -23,11 +23,27 @@ calculate_indices <- function(data) {
 indices_df <- calculate_indices(df)
 
 indices_df |> 
-  group_by(condition) |> 
+  group_by(cond) |> 
   summarize(
     avg_win_stay = mean(win_stay),
     avg_lose_shift = mean(lose_shift)
   )
+
+fm <- lmer(
+  win_stay ~ 0 + cond + (1 | subjID),
+  data = indices_df
+)
+confint(fm)
+
+mod1 <- brm(
+  lose_shift ~ 0 + cond + (cond | subjID),
+  family = asym_laplace(),
+  data = indices_df,
+  backend = "cmdstanr"
+)
+
+pp_check(mod1)
+summary(mod1)
 
 raw_df |> 
   group_by(video_type) |> 
